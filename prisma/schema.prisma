@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+model User {
+  userId        String    @id @default(uuid())  @db.Char(36) @map("user_id")
+  userName      String    @db.VarChar(255)     @map("user_name") 
+  userEmail     String    @unique @db.VarChar(255) @map("user_email")
+  userPassword  String    @db.VarChar(255)  @map("user_password")
+  userRole      UserRole  @map("user_role") 
+  isDeleted     Boolean   @default(false) @map("is_deleted") 
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // relations
+  rooms         Room[]     @relation("UserRooms")
+  bookings      Booking[]  @relation("UserBookings")
+}
+
+model Room {
+  roomId        String     @id @default(uuid())  @db.Char(36) @map("room_id")
+  ownerId       String     @db.Char(36) @map("owner_id")
+  roomName      String     @db.VarChar(255) 
+  roomPrice     Decimal    @map("room_price") @db.Decimal(8,2)
+  roomCapacity  Int        @map("room_capacity") 
+  isActive      Boolean    @default(true) @map("is_active")
+  isDeleted     Boolean    @default(false) @map("is_deleted")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+  
+  // relations
+  owner         User       @relation("UserRooms", fields: [ownerId], references: [userId])
+  bookings      Booking[]  @relation("RoomBookings")
+  @@index([ownerId])
+}
+
+model Booking {
+  bookingId      String         @id @default(uuid())  @db.Char(36) @map("booking_id")
+  userId         String          @db.Char(36) @map("user_id")
+  roomId         String          @db.Char(36) @map("room_id")
+  bookingStatus  BookingStatus
+  checkIn        DateTime       @map("check_in")
+  checkOut       DateTime       @map("check_out")  
+  createdAt      DateTime       @default(now())     @map("created_at")
+  updatedAt      DateTime       @updatedAt      @map("updated_at")
+  isDeleted     Boolean         @default(false) @map("is_deleted")
+
+  // relations
+  user           User           @relation("UserBookings", fields: [userId], references: [userId])
+  room           Room           @relation("RoomBookings", fields: [roomId], references: [roomId])
+  @@index([userId])
+  @@index([roomId])
+  @@unique([roomId , checkIn , checkOut])
+}
+
+enum UserRole {
+  OWNER
+  GUEST
+  ADMIN
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}

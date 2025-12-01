@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  userId       String   @id @default(uuid()) @map("user_id") @db.Char(36)
+  userName     String   @map("user_name") @db.VarChar(255)
+  userEmail    String   @unique @map("user_email") @db.VarChar(255)
+  userPassword String   @map("user_password") @db.VarChar(255)
+  userRole     UserRole @map("user_role")
+  isDeleted    Boolean  @default(false) @map("is_deleted")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // relations
+  rooms    Room[]    @relation("UserRooms")
+  bookings Booking[] @relation("UserBookings")
+}
+
+model Room {
+  roomId       String   @id @default(uuid()) @map("room_id") @db.Char(36)
+  ownerId      String   @map("owner_id") @db.Char(36)
+  roomName     String   @db.VarChar(255)
+  roomPrice    Decimal  @map("room_price") @db.Decimal(8, 2)
+  roomCapacity Int      @map("room_capacity")
+  isActive     Boolean  @default(true) @map("is_active")
+  isDeleted    Boolean  @default(false) @map("is_deleted")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // relations
+  owner    User      @relation("UserRooms", fields: [ownerId], references: [userId])
+  bookings Booking[] @relation("RoomBookings")
+
+  @@index([ownerId])
+}
+
+model Booking {
+  bookingId     String        @id @default(uuid()) @map("booking_id") @db.Char(36)
+  userId        String        @map("user_id") @db.Char(36)
+  roomId        String        @map("room_id") @db.Char(36)
+  bookingStatus BookingStatus
+  checkIn       DateTime      @map("check_in")
+  checkOut      DateTime      @map("check_out")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  isDeleted     Boolean       @default(false) @map("is_deleted")
+
+  // relations
+  user User @relation("UserBookings", fields: [userId], references: [userId])
+  room Room @relation("RoomBookings", fields: [roomId], references: [roomId])
+
+  @@unique([roomId, checkIn, checkOut])
+  @@index([userId])
+  @@index([roomId])
+}
+
+enum UserRole {
+  OWNER
+  GUEST
+  ADMIN
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
