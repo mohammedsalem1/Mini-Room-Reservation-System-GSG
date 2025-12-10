@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { RegisterDto } from '../auth/dto/auth.dto';
+import { PaginationQueryType } from 'src/types/utils.types';
 
 @Injectable()
 export class UserService {
@@ -13,9 +14,25 @@ export class UserService {
     });
   }
 
-  findAll() {
-    return `This action returns all user`;
-  }
+  async findAll(query:PaginationQueryType) {
+    const pagination = this.prismaService.handleQueryPagination(query)
+        const booking = await this.prismaService.user.findMany({
+            where: { isDeleted: false },  
+            ...pagination,
+});
+        const count = await this.prismaService.user.count({
+          where:{ isDeleted:false}
+        })
+        return {
+          data:booking,
+          ...this.prismaService.formatePaginationResult({
+            page:query.page! , 
+            limit:pagination.take , 
+            count
+           }          
+          )
+        } 
+      }
    
   findOne(id: string) {
     return `This action returns a #${id} user`;
