@@ -17,7 +17,7 @@ export class UserService {
   async findAll(query:PaginationQueryType) {
     const pagination = this.prismaService.handleQueryPagination(query)
         const booking = await this.prismaService.user.findMany({
-            where: { isDeleted: false },  
+            where: { isDeleted: false},  
             ...pagination,
 });
         const count = await this.prismaService.user.count({

@@ -1,14 +1,26 @@
-import { ForbiddenException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
-import { CreateRoomDto, RoomFilterDto, UpdateRoomDto } from './dto/room.dto';
+import { BadRequestException, ForbiddenException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { CreateRoomDto, RoomFilterDto, RoomOverviewResponseDto, UpdateRoomDto } from './dto/room.dto';
 import { DatabaseService } from '../database/database.service';
 import { Prisma } from 'generated/prisma';
+import { PaginationQueryType, PaginationResult } from 'src/types/utils.types';
 
 @Injectable()
 export class RoomService {
   constructor(
     private prismaService:DatabaseService
   ){}
-  create(createRoomDto: CreateRoomDto , ownerId:string) {
+  async create(createRoomDto: CreateRoomDto , ownerId:string) {
+   const exists = await this.prismaService.room.findFirst({
+      where: {
+        ownerId,
+        roomName: createRoomDto.roomName,
+        isDeleted: false,
+      },
+    });
+
+    if (exists) {
+      throw new BadRequestException("Room with this name already exists");
+    }
     return this.prismaService.room.create({
       data:{
         ...createRoomDto , 
@@ -18,7 +30,24 @@ export class RoomService {
       }
     });
   }
-
+   async findAllRooms(query:PaginationQueryType):Promise<PaginationResult<RoomOverviewResponseDto>> {
+    const pagination = this.prismaService.handleQueryPagination(query)
+    const rooms  = await this.prismaService.room.findMany({
+      ...pagination , 
+      where:{isDeleted:false},
+      include:{bookings:true}
+    })
+    const count =  await this.prismaService.user.count()
+        return {
+          data:rooms,
+          ...this.prismaService.formatePaginationResult({
+            page:query.page! , 
+            limit:pagination.take , 
+            count
+           }          
+          )
+        } 
+      }
 async findAvailableRooms(filterDto: RoomFilterDto) {
     const { checkIn, checkOut, minPrice, maxPrice, minCapacity, maxCapacity } = filterDto;
 

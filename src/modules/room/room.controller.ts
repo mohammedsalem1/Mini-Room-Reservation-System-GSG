@@ -3,10 +3,12 @@ import { RoomService } from './room.service';
 import { ZodValidationPipe } from 'src/pipes/zod-validation.pipes';
 import { createRoomValidationSchema, updateRoomValidationSchema } from './utils/room.validation.schema';
 import { CreateRoomDto, RoomFilterDto, UpdateRoomDto } from './dto/room.dto';
-import { ApiBasicAuth, ApiBearerAuth, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
+import { ApiBasicAuth, ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 import { Roles } from 'src/decorator/role.decorator';
 import { request, Request } from 'express';
 import { IsPublic } from 'src/decorator/public.decorator';
+import type{ PaginationQueryType } from 'src/types/utils.types';
+import { PaginationQueryTypeSchema } from 'src/utils/pagination.validation.schema';
 
 @Controller('room')
 @ApiBearerAuth('jwt')
@@ -14,7 +16,7 @@ export class RoomController {
   constructor(private readonly roomService: RoomService) {}
   
   @ApiOperation({summary:"Create room by Owner"})
-  @ApiOkResponse({description:"the owner create room successfully"})
+  @ApiCreatedResponse({description:"the owner create room successfully"})
   @Roles(['OWNER'])
   @UsePipes(new ZodValidationPipe(createRoomValidationSchema))
   @Post('create')
@@ -23,7 +25,7 @@ export class RoomController {
     @Req() request:Express.Request) {
     return this.roomService.create(createRoomDto , request.user.userId);
   }
-  @Roles(['GUEST'])
+  @Roles(['GUEST' , 'ADMIN'])
   @ApiOperation({ summary: "Get all available rooms for Guests" })
   @ApiOkResponse({ description: "Returns all rooms available in the specified period and filters" })
   @Get('available')
@@ -31,6 +33,17 @@ export class RoomController {
     @Query() filterDto: RoomFilterDto
   ) { 
     return this.roomService.findAvailableRooms(filterDto); 
+  }
+
+  @Roles(['ADMIN'])
+  @ApiOperation({ summary: "Get all rooms for Admin" })
+  @ApiOkResponse({ description: "Returns all rooms" })
+  @Get()
+  findAllRooms(
+    @Query(new ZodValidationPipe(PaginationQueryTypeSchema))
+          query:PaginationQueryType
+  ) { 
+    return this.roomService.findAllRooms(query); 
   }
 
   @ApiOperation({summary:"Update room by Owner"})

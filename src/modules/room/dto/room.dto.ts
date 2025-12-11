@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from "@nestjs/swagger";
+import { Prisma } from "generated/prisma";
 
 export class CreateRoomDto {
     @ApiProperty({
@@ -47,5 +48,10 @@ export class RoomFilterDto {
   maxCapacity?: number;
 
 }
+export type RoomOverviewResponseDto = Prisma.RoomGetPayload<{
+    include :{
+        bookings:true
+    }
+}>
 
 
